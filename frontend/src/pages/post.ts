@@ -35,6 +35,7 @@ export async function renderPost(el: HTMLElement, { city, id }: { city: string; 
       <h1>${escHtml(post.title)}</h1>
       <div class="post-body">${renderMarkdown(bodyClean)}</div>
       <div class="post-meta-bar">
+        <span>${post.author === 'anonymous' ? '🕵️ anonymous' : post.author ? `@${escHtml(post.author)}` : ''}</span>
         <span>${timeAgo(post.created_at)}</span>
         <span>💬 ${post.comments} comments</span>
       </div>

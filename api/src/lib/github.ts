@@ -28,11 +28,25 @@ export async function getIssue(token: string, repo: string, number: number) {
   return ghFetch(token, `/repos/${repo}/issues/${number}`)
 }
 
+async function ensureLabels(token: string, repo: string, labels: string[]) {
+  await Promise.all(labels.map(async (name) => {
+    try {
+      await ghFetch(token, `/repos/${repo}/labels`, {
+        method: 'POST',
+        body: JSON.stringify({ name, color: '0075ca' })
+      })
+    } catch {
+      // label already exists — ignore
+    }
+  }))
+}
+
 export async function createIssue(token: string, repo: string, data: {
   title: string
   body: string
   labels?: string[]
 }) {
+  if (data.labels?.length) await ensureLabels(token, repo, data.labels)
   return ghFetch(token, `/repos/${repo}/issues`, {
     method: 'POST',
     body: JSON.stringify(data)

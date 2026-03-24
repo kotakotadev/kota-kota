@@ -66,7 +66,8 @@ input:focus, textarea:focus, select:focus { outline: 2px solid var(--primary); }
 .post-date { color: var(--muted); font-size: 0.85rem; }
 .post-title { font-size: 1rem; font-weight: 600; }
 .post-title a { color: var(--text); }
-.post-footer { margin-top: 0.5rem; color: var(--muted); font-size: 0.85rem; }
+.post-footer { margin-top: 0.5rem; color: var(--muted); font-size: 0.85rem; display: flex; gap: 1rem; }
+.post-author { color: var(--text); font-weight: 500; font-size: 0.85rem; }
 .label { background: #eff6ff; color: var(--primary); font-size: 0.75rem; padding: 0.2rem 0.5rem; border-radius: 9999px; margin-right: 0.25rem; }
 
 /* Post detail */

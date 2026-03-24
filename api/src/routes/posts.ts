@@ -12,6 +12,27 @@ async function getCity(db: D1Database, slug: string) {
   ).bind(slug).first<{ id: string; github_repo: string }>()
 }
 
+async function enrichWithAuthors(db: D1Database, cityId: string, issues: any[]) {
+  if (!issues.length) return issues
+  const numbers = issues.map(i => i.number)
+  const placeholders = numbers.map(() => '?').join(',')
+  const rows = await db.prepare(
+    `SELECT pa.issue_number, pa.is_anonymous, u.username
+     FROM post_authors pa
+     LEFT JOIN users u ON u.id = pa.user_id
+     WHERE pa.city_id = ? AND pa.issue_number IN (${placeholders})`
+  ).bind(cityId, ...numbers).all<{ issue_number: number; is_anonymous: number; username: string | null }>()
+
+  const map = new Map(rows.results.map(r => [r.issue_number, r]))
+  return issues.map(issue => {
+    const a = map.get(issue.number)
+    return {
+      ...issue,
+      author: a ? (a.is_anonymous ? 'anonymous' : (a.username ?? 'unknown')) : null
+    }
+  })
+}
+
 // GET /:city/posts — cached 30s
 posts.get('/', optionalAuth, async (c) => {
   return withCache(c.req.raw, c.executionCtx, async () => {
@@ -23,7 +44,8 @@ posts.get('/', optionalAuth, async (c) => {
     if (label) params.labels = label
 
     const issues = await listIssues(c.env.GITHUB_BOT_TOKEN, city.github_repo, params)
-    return c.json(issues)
+    const enriched = await enrichWithAuthors(c.env.DB, city.id, issues)
+    return c.json(enriched)
   }, 30)
 })
 
@@ -34,7 +56,8 @@ posts.get('/:id', optionalAuth, async (c) => {
     if (!city) return c.json({ error: 'City not found' }, 404)
 
     const issue = await getIssue(c.env.GITHUB_BOT_TOKEN, city.github_repo, Number(c.req.param('id')))
-    return c.json(issue)
+    const [enriched] = await enrichWithAuthors(c.env.DB, city.id, [issue])
+    return c.json(enriched)
   }, 30)
 })
 
@@ -54,11 +77,17 @@ posts.post('/', authMiddleware, requireRole('user'), async (c) => {
     tenant_id: tenant_id ?? undefined
   })
 
-  const issue = await createIssue(c.env.GITHUB_BOT_TOKEN, city.github_repo, {
-    title,
-    body,
-    labels: ['post', ...labels]
-  })
+  let issue: any
+  try {
+    issue = await createIssue(c.env.GITHUB_BOT_TOKEN, city.github_repo, {
+      title,
+      body,
+      labels: ['post', ...labels]
+    })
+  } catch (err: any) {
+    console.error('GitHub createIssue failed:', err.message)
+    return c.json({ error: 'Failed to create post: ' + err.message }, 502)
+  }
 
   await c.env.DB.prepare(
     `INSERT INTO post_authors (issue_number, city_id, user_id, tenant_id, is_anonymous, created_at)

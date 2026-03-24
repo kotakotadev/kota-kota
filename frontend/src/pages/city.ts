@@ -73,6 +73,7 @@ async function loadPosts(container: HTMLElement, city: string, label: string) {
         <a href="/${city}/posts/${post.number}" data-link>${escHtml(post.title)}</a>
       </h2>
       <div class="post-footer">
+        <span class="post-author">${post.author === 'anonymous' ? '🕵️ anonymous' : post.author ? `@${escHtml(post.author)}` : ''}</span>
         <span class="post-comments">💬 ${post.comments} comments</span>
       </div>
     </article>
