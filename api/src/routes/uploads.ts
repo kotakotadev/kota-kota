@@ -4,35 +4,41 @@ import type { Bindings, Variables } from '../types'
 
 const uploads = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
-// POST /uploads/sign — returns a presigned R2 upload URL
-uploads.post('/sign', authMiddleware, async (c) => {
-  const { filename, content_type, city_slug } = await c.req.json()
-  if (!filename || !content_type || !city_slug) {
-    return c.json({ error: 'Missing fields' }, 400)
-  }
+const ALLOWED_TYPES: Record<string, string> = {
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  png: 'image/png',
+  gif: 'image/gif',
+  webp: 'image/webp'
+}
 
-  const ext = filename.split('.').pop()?.toLowerCase() ?? 'bin'
-  const allowed = ['jpg', 'jpeg', 'png', 'gif', 'webp']
-  if (!allowed.includes(ext)) return c.json({ error: 'File type not allowed' }, 400)
+const MAX_SIZE = 5 * 1024 * 1024 // 5MB
 
-  const key = `${city_slug}/uploads/${Date.now()}-${crypto.randomUUID().slice(0, 8)}.${ext}`
+// POST /uploads — browser sends file directly to Worker → stored in R2
+// Worker sets Cache-Control: 1 year (immutable, UUID filename never changes)
+uploads.post('/', authMiddleware, async (c) => {
+  const formData = await c.req.formData()
+  const file = formData.get('file') as File | null
+  const citySlug = formData.get('city_slug') as string | null
 
-  // R2 presigned URL (valid 5 minutes)
-  const url = await c.env.R2.createMultipartUpload(key)
+  if (!file || !citySlug) return c.json({ error: 'Missing file or city_slug' }, 400)
+  if (file.size > MAX_SIZE) return c.json({ error: 'File too large (max 5MB)' }, 400)
 
-  return c.json({ key, upload_id: url.uploadId })
-})
+  const ext = file.name.split('.').pop()?.toLowerCase() ?? ''
+  const contentType = ALLOWED_TYPES[ext]
+  if (!contentType) return c.json({ error: 'File type not allowed' }, 400)
 
-// POST /uploads/complete — finalize multipart upload and return public URL
-uploads.post('/complete', authMiddleware, async (c) => {
-  const { key, upload_id, parts } = await c.req.json()
-  if (!key || !upload_id || !parts) return c.json({ error: 'Missing fields' }, 400)
+  const key = `${citySlug}/uploads/${Date.now()}-${crypto.randomUUID().slice(0, 8)}.${ext}`
 
-  const upload = c.env.R2.resumeMultipartUpload(key, upload_id)
-  await upload.complete(parts)
+  await c.env.R2.put(key, await file.arrayBuffer(), {
+    httpMetadata: {
+      contentType,
+      // Long cache: files use random UUID names, they never change
+      cacheControl: 'public, max-age=31536000, immutable'
+    }
+  })
 
-  const publicUrl = `${c.env.UPLOADS_URL}/${key}`
-  return c.json({ url: publicUrl })
+  return c.json({ url: `${c.env.UPLOADS_URL}/${key}` }, 201)
 })
 
 export default uploads
