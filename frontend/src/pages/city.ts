@@ -22,9 +22,9 @@ export async function renderCity(el: HTMLElement, { city }: { city: string }) {
 
   if (isLoggedIn()) {
     renderNotificationBell(el.querySelector('#notif-bell')!, city)
-    el.querySelector('#btn-logout')?.addEventListener('click', () => {
-      import('../auth').then(m => m.logout())
-    })
+    const doLogout = () => import('../auth').then(m => m.logout())
+    el.querySelector('#btn-logout')?.addEventListener('click', doLogout)
+    el.querySelector('#btn-logout-mobile')?.addEventListener('click', doLogout)
     const openModal = () => showNewPostModal(el.querySelector('#post-modal')!, city, config.categories)
     el.querySelector('#btn-new-post')?.addEventListener('click', openModal)
     el.querySelector('#bottom-compose')?.addEventListener('click', openModal)

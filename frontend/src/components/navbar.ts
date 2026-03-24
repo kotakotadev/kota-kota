@@ -33,7 +33,7 @@ function bottomNav(city: string, loggedIn: boolean): string {
         <span>Places</span>
       </a>
       ${loggedIn
-        ? `<button id="btn-logout" class="bottom-nav-item">
+        ? `<button id="btn-logout-mobile" class="bottom-nav-item">
              <span class="nav-icon">↩</span>
              <span>Logout</span>
            </button>`
@@ -58,7 +58,8 @@ export async function renderNavbar(city: string, config: CityConfig): Promise<st
       <div class="top-bar-right">
         ${loggedIn
           ? `<span id="notif-bell" class="notif-wrap"></span>
-             <button id="btn-new-post" class="top-bar-btn">Post</button>`
+             <button id="btn-new-post" class="top-bar-btn">Post</button>
+             <button id="btn-logout" class="top-bar-link">Logout</button>`
           : `<a href="/login?city=${city}" data-link class="top-bar-link">Login</a>
              <a href="/register?city=${city}" data-link class="top-bar-btn">Join</a>`
         }
