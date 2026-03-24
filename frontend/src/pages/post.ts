@@ -63,8 +63,11 @@ export async function renderPost(el: HTMLElement, { city, id }: { city: string; 
 
 function renderComments(container: HTMLElement, comments: any[], city: string, postId: string) {
   const commentsHtml = comments.map(c => {
-    const bodyClean = c.body.replace(/<!--citypage-comment:.*?-->/gs, '').trim()
-    const name = c.user?.login ?? 'user'
+    // Body format: "**@username**\n\ncontent\n\n<!--citypage-comment:...-->"
+    const withoutMeta = c.body.replace(/<!--citypage-comment:.*?-->/gs, '').trim()
+    const usernameMatch = withoutMeta.match(/^\*\*@([^\*]+)\*\*/)
+    const name = usernameMatch ? usernameMatch[1] : (c.user?.login ?? 'user')
+    const bodyClean = withoutMeta.replace(/^\*\*@[^\*]+\*\*\s*/,'').trim()
     return `
       <div class="comment-item">
         <div class="post-left">${makeAvatar(name, 30)}</div>
