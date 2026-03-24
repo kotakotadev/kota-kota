@@ -1,0 +1,30 @@
+name = "kotakotadev-api"
+main = "src/index.ts"
+compatibility_date = "2024-11-01"
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "kotakotadev-db"
+database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
+
+[[r2_buckets]]
+binding = "R2"
+bucket_name = "kotakotadev-uploads"
+
+[vars]
+ENVIRONMENT = "production"
+APP_URL = "https://city.page"
+APP_NAME = "city.page"
+API_URL = "https://api.city.page"
+UPLOADS_URL = "https://uploads.city.page"
+GITHUB_ORG = "kotakotadev"
+GITHUB_TEMPLATE_REPO = "city-template"
+
+# Secrets — set via: wrangler secret put SECRET_NAME
+# GITHUB_BOT_TOKEN
+# GITHUB_WEBHOOK_SECRET
+# JWT_SECRET
+# EMAIL_WORKER_URL
+# EMAIL_WORKER_SECRET
+# RESEND_API_KEY

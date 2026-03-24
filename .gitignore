@@ -1,0 +1,9 @@
+city-template/
+node_modules/
+dist/
+.wrangler/
+.dev.vars
+*.env
+.env
+.env.local
+.env.production
