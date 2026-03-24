@@ -14,7 +14,7 @@ bucket_name = "kotakotadev-uploads"
 
 [vars]
 ENVIRONMENT = "production"
-APP_URL = "https://city.page"
+APP_URL = "https://kotakotadev-frontend.pages.dev"
 APP_NAME = "city.page"
 API_URL = "https://api.city.page"
 UPLOADS_URL = "https://uploads.city.page"
