@@ -1,4 +1,4 @@
-import { apiFetch } from '../auth'
+import { apiFetch, isLoggedIn } from '../auth'
 import { navigate } from '../router'
 import { APP_NAME } from '../config'
 
@@ -7,6 +7,13 @@ export async function renderHome(el: HTMLElement) {
     <header class="top-bar">
       <div class="top-bar-left">
         <span class="brand-name">${APP_NAME}</span>
+      </div>
+      <div class="top-bar-right">
+        ${isLoggedIn()
+          ? `<button id="home-logout" class="top-bar-link">Logout</button>`
+          : `<a href="/login" data-link class="top-bar-link">Login</a>
+             <a href="/register" data-link class="top-bar-btn">Join</a>`
+        }
       </div>
     </header>
     <div class="home-wrap">
@@ -25,6 +32,9 @@ export async function renderHome(el: HTMLElement) {
     </div>
   `
 
+  el.querySelector('#home-logout')?.addEventListener('click', () => {
+    import('../auth').then(m => m.logout())
+  })
   initCityMap(el.querySelector('#city-map')!)
   initCitySearch(
     el.querySelector<HTMLInputElement>('#city-input')!,

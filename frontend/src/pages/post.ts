@@ -1,4 +1,4 @@
-import { apiFetch, isLoggedIn } from '../auth'
+import { apiFetch, isLoggedIn, logout } from '../auth'
 import { makeAvatar } from '../components/navbar'
 import { APP_NAME } from '../config'
 
@@ -7,7 +7,14 @@ export async function renderPost(el: HTMLElement, { city, id }: { city: string; 
     <header class="top-bar">
       <div class="top-bar-left">
         <a href="/${city}" data-link class="brand-name">${APP_NAME}</a>
-        <span class="city-badge">${city}</span>
+        <a href="/${city}" data-link class="city-badge">${city}</a>
+      </div>
+      <div class="top-bar-right">
+        ${isLoggedIn()
+          ? `<button id="post-logout" class="top-bar-link">Logout</button>`
+          : `<a href="/login?city=${city}" data-link class="top-bar-link">Login</a>
+             <a href="/register?city=${city}" data-link class="top-bar-btn">Join</a>`
+        }
       </div>
     </header>
     <div class="post-detail-wrap">
@@ -16,6 +23,8 @@ export async function renderPost(el: HTMLElement, { city, id }: { city: string; 
       <div id="comments-section"></div>
     </div>
   `
+
+  el.querySelector('#post-logout')?.addEventListener('click', () => logout())
 
   const [postRes, commentsRes] = await Promise.all([
     apiFetch(`/${city}/posts/${id}`),
