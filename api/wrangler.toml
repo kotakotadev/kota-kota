@@ -6,7 +6,7 @@ compatibility_flags = ["nodejs_compat"]
 [[d1_databases]]
 binding = "DB"
 database_name = "kotakotadev-db"
-database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
+database_id = "c6cd0337-cdbe-4fe9-80a6-d1b2c16bd463"
 
 [[r2_buckets]]
 binding = "R2"
