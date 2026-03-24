@@ -15,7 +15,10 @@ export function renderLogin(el: HTMLElement) {
         <form class="auth-form" id="login-form">
           <input class="auth-field" name="email" type="email" placeholder="Email" required autocomplete="email" />
           <input class="auth-field" name="password" type="password" placeholder="Password" required autocomplete="current-password" />
-          <input class="auth-field" name="city" type="text" placeholder="City slug (e.g. yogyakarta-id)" value="${citySlug}" required />
+          ${citySlug
+            ? `<input type="hidden" name="city" value="${citySlug}" />`
+            : `<input class="auth-field" name="city" type="text" placeholder="City slug (e.g. yogyakarta-id)" required />`
+          }
           <p id="login-error" class="error-msg hidden"></p>
           <button class="auth-submit" type="submit">Sign in</button>
         </form>
@@ -54,13 +57,16 @@ export function renderRegister(el: HTMLElement) {
     <div class="auth-page">
       <div class="auth-logo">${APP_NAME}</div>
       <div class="auth-card">
-        <h2>Join ${citySlug || 'your city'}</h2>
+        <h2>Join ${citySlug ? citySlug.replace(/-/g, ' ') : 'your city'}</h2>
         <p>Create your community account.</p>
         <form class="auth-form" id="register-form">
           <input class="auth-field" name="username" placeholder="Username" required autocomplete="username" />
           <input class="auth-field" name="email" type="email" placeholder="Email" required autocomplete="email" />
           <input class="auth-field" name="password" type="password" placeholder="Password (min 8 chars)" minlength="8" required autocomplete="new-password" />
-          <input class="auth-field" name="city" type="text" placeholder="City slug (e.g. yogyakarta-id)" value="${citySlug}" required />
+          ${citySlug
+            ? `<input type="hidden" name="city" value="${citySlug}" />`
+            : `<input class="auth-field" name="city" type="text" placeholder="City slug (e.g. yogyakarta-id)" required />`
+          }
           <p id="register-error" class="error-msg hidden"></p>
           <button class="auth-submit" type="submit">Create account</button>
         </form>
