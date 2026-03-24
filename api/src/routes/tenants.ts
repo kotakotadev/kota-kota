@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import { authMiddleware, requireRole } from '../middleware/auth'
+import { withCache, purgeCache } from '../lib/cache'
 import type { Bindings, Variables } from '../types'
 
 const tenants = new Hono<{ Bindings: Bindings; Variables: Variables }>()
@@ -10,47 +11,51 @@ async function getCity(db: D1Database, slug: string) {
   ).bind(slug).first<{ id: string }>()
 }
 
-// GET /:city/tenants — list with optional map mode
+// GET /:city/tenants — cached 5 min
 tenants.get('/', async (c) => {
-  const city = await getCity(c.env.DB, c.req.param('city'))
-  if (!city) return c.json({ error: 'City not found' }, 404)
+  return withCache(c.req.raw, c.executionCtx, async () => {
+    const city = await getCity(c.env.DB, c.req.param('city'))
+    if (!city) return c.json({ error: 'City not found' }, 404)
 
-  const { map, category, district } = c.req.query()
-  let query: string
-  let bindings: unknown[]
+    const { map, category, district } = c.req.query()
+    let query: string
+    let bindings: unknown[]
 
-  if (map === '1') {
-    query = 'SELECT id, slug, name, category, latitude, longitude, is_verified FROM tenants WHERE city_id = ? AND latitude IS NOT NULL'
-    bindings = [city.id]
-  } else {
-    query = 'SELECT id, slug, name, category, district, address, is_verified, avatar_url FROM tenants WHERE city_id = ?'
-    bindings = [city.id]
-    if (category) { query += ' AND category = ?'; bindings.push(category) }
-    if (district) { query += ' AND district = ?'; bindings.push(district) }
-    query += ' ORDER BY name'
-  }
+    if (map === '1') {
+      query = 'SELECT id, slug, name, category, latitude, longitude, is_verified FROM tenants WHERE city_id = ? AND latitude IS NOT NULL'
+      bindings = [city.id]
+    } else {
+      query = 'SELECT id, slug, name, category, district, address, is_verified, avatar_url FROM tenants WHERE city_id = ?'
+      bindings = [city.id]
+      if (category) { query += ' AND category = ?'; bindings.push(category) }
+      if (district) { query += ' AND district = ?'; bindings.push(district) }
+      query += ' ORDER BY name'
+    }
 
-  const { results } = await (c.env.DB.prepare(query) as D1PreparedStatement).bind(...bindings).all()
-  return c.json(results)
+    const { results } = await (c.env.DB.prepare(query) as D1PreparedStatement).bind(...bindings).all()
+    return c.json(results)
+  }, 300)
 })
 
-// GET /:city/tenants/:slug
+// GET /:city/tenants/:slug — cached 5 min
 tenants.get('/:slug', async (c) => {
-  const city = await getCity(c.env.DB, c.req.param('city'))
-  if (!city) return c.json({ error: 'City not found' }, 404)
+  return withCache(c.req.raw, c.executionCtx, async () => {
+    const city = await getCity(c.env.DB, c.req.param('city'))
+    if (!city) return c.json({ error: 'City not found' }, 404)
 
-  const tenant = await c.env.DB.prepare(
-    'SELECT * FROM tenants WHERE city_id = ? AND slug = ?'
-  ).bind(city.id, c.req.param('slug')).first()
-  if (!tenant) return c.json({ error: 'Tenant not found' }, 404)
+    const tenant = await c.env.DB.prepare(
+      'SELECT * FROM tenants WHERE city_id = ? AND slug = ?'
+    ).bind(city.id, c.req.param('slug')).first()
+    if (!tenant) return c.json({ error: 'Tenant not found' }, 404)
 
-  const { results: members } = await c.env.DB.prepare(
-    `SELECT u.username, u.avatar_url, u.is_verified, tm.role
-     FROM tenant_members tm JOIN users u ON u.id = tm.user_id
-     WHERE tm.city_id = ? AND tm.tenant_id = ?`
-  ).bind(city.id, (tenant as any).id).all()
+    const { results: members } = await c.env.DB.prepare(
+      `SELECT u.username, u.avatar_url, u.is_verified, tm.role
+       FROM tenant_members tm JOIN users u ON u.id = tm.user_id
+       WHERE tm.city_id = ? AND tm.tenant_id = ?`
+    ).bind(city.id, (tenant as any).id).all()
 
-  return c.json({ ...tenant, members })
+    return c.json({ ...tenant, members })
+  }, 300)
 })
 
 // POST /:city/tenants — any 'user' can create a tenant
