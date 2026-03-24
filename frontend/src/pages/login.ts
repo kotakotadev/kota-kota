@@ -1,5 +1,6 @@
 import { login, register } from '../auth'
 import { navigate } from '../router'
+import { APP_NAME } from '../config'
 
 export function renderLogin(el: HTMLElement) {
   const params = new URLSearchParams(location.search)
@@ -8,7 +9,7 @@ export function renderLogin(el: HTMLElement) {
   el.innerHTML = `
     <div class="auth-page">
       <div class="auth-box">
-        <a href="/" data-link class="brand">city.page</a>
+        <a href="/" data-link class="brand">${APP_NAME}</a>
         <h2>Login</h2>
         <form id="login-form">
           <input name="email" type="email" placeholder="Email" required />
@@ -46,7 +47,7 @@ export function renderRegister(el: HTMLElement) {
   el.innerHTML = `
     <div class="auth-page">
       <div class="auth-box">
-        <a href="/" data-link class="brand">city.page</a>
+        <a href="/" data-link class="brand">${APP_NAME}</a>
         <h2>Register</h2>
         <form id="register-form">
           <input name="username" placeholder="Username" required />

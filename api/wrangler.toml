@@ -14,10 +14,10 @@ bucket_name = "kotakotadev-uploads"
 
 [vars]
 ENVIRONMENT = "production"
-APP_URL = "https://kotakotadev-frontend.pages.dev"
-APP_NAME = "city.page"
-API_URL = "https://api.city.page"
-UPLOADS_URL = "https://uploads.city.page"
+APP_URL = "https://kotakota.base.my.id"
+APP_NAME = "kotakota"
+API_URL = "https://kotakotadev-api.kotakota-developer.workers.dev"
+UPLOADS_URL = "https://kotakotadev-uploads.r2.dev"
 GITHUB_ORG = "kotakotadev"
 GITHUB_TEMPLATE_REPO = "city-template"
 

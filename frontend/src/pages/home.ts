@@ -1,11 +1,12 @@
 import { apiFetch } from '../auth'
 import { navigate } from '../router'
+import { APP_NAME } from '../config'
 
 export async function renderHome(el: HTMLElement) {
   el.innerHTML = `
     <div class="home">
       <header class="hero">
-        <h1>city.page</h1>
+        <h1>${APP_NAME}</h1>
         <p>Your local community — post, comment, discover businesses near you.</p>
       </header>
       <section class="city-search">

@@ -1,5 +1,6 @@
 import type { CityConfig } from '../lib/city-config'
 import { isLoggedIn } from '../auth'
+import { APP_NAME } from '../config'
 
 export async function renderNavbar(city: string, config: CityConfig): Promise<string> {
   const loggedIn = isLoggedIn()
@@ -9,7 +10,7 @@ export async function renderNavbar(city: string, config: CityConfig): Promise<st
 
   return `
     <nav class="navbar" style="--nav-primary: ${config.theme.primary}">
-      <a href="/" data-link class="brand">city.page</a>
+      <a href="/" data-link class="brand">${APP_NAME}</a>
       ${config.theme.logo_url
         ? `<img src="${config.theme.logo_url}" alt="${config.name}" class="city-logo" />`
         : `<a href="/${city}" data-link class="city-name">${config.name}</a>`
