@@ -28,3 +28,12 @@ GITHUB_TEMPLATE_REPO = "city-template"
 # EMAIL_WORKER_URL
 # EMAIL_WORKER_SECRET
 # RESEND_API_KEY
+
+# ─── Dev environment overrides ───────────────────────────────────────────────
+# Used when running: wrangler dev
+# Secrets for dev go in .dev.vars (gitignored) — see .dev.vars.example
+[env.dev.vars]
+ENVIRONMENT = "development"
+APP_URL = "http://localhost:5173"
+API_URL = "http://localhost:8787"
+UPLOADS_URL = "http://localhost:8787/uploads-preview"

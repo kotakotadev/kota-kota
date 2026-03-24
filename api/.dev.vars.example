@@ -1,7 +1,18 @@
 # Copy to .dev.vars for local development (never commit .dev.vars)
+# These override [vars] in wrangler.toml when running wrangler dev
+
+# GitHub
 GITHUB_BOT_TOKEN=github_pat_xxxx
 GITHUB_WEBHOOK_SECRET=your_webhook_secret
+
+# Auth
 JWT_SECRET=your_jwt_secret_min_32_chars
+
+# Email worker
 EMAIL_WORKER_URL=http://localhost:3000
 EMAIL_WORKER_SECRET=your_email_worker_secret
 RESEND_API_KEY=re_xxxx
+
+# Override upload URL for local dev (wrangler local R2 simulation)
+# Remove this line to use the value from [env.dev.vars] in wrangler.toml
+# UPLOADS_URL=http://localhost:8787/uploads-preview
