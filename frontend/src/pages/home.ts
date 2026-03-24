@@ -4,20 +4,28 @@ import { APP_NAME } from '../config'
 
 export async function renderHome(el: HTMLElement) {
   el.innerHTML = `
-    <div class="home">
-      <header class="hero">
-        <h1>${APP_NAME}</h1>
-        <p>Your local community — post, comment, discover businesses near you.</p>
-      </header>
-      <section class="city-search">
-        <input id="city-input" type="text" placeholder="Search your city..." autocomplete="off" />
+    <header class="top-bar">
+      <div class="top-bar-left">
+        <span class="brand-name">${APP_NAME}</span>
+      </div>
+    </header>
+    <div class="home-wrap">
+      <div class="home-hero">
+        <h1>Your city,<br>your voice.</h1>
+        <p>A community platform for local residents — post, discuss, discover.</p>
+      </div>
+      <div class="home-search-wrap">
+        <div class="search-bar">
+          <span class="search-icon">⊕</span>
+          <input class="search-field" id="city-input" type="text" placeholder="Search a city…" autocomplete="off" />
+        </div>
         <div id="city-results"></div>
-      </section>
-      <section id="city-map" class="city-map"></section>
+      </div>
+      <div class="home-map" id="city-map"></div>
     </div>
   `
 
-  await initCityMap(el.querySelector('#city-map')!)
+  initCityMap(el.querySelector('#city-map')!)
   initCitySearch(
     el.querySelector<HTMLInputElement>('#city-input')!,
     el.querySelector('#city-results')!
@@ -59,11 +67,14 @@ function initCitySearch(input: HTMLInputElement, results: HTMLElement) {
         c.slug.includes(q.toLowerCase())
       )
       results.innerHTML = filtered.map(c =>
-        `<a class="city-result" href="/${c.slug}" data-link>
-          <strong>${c.name}</strong>
-          <span>${c.region ?? ''} · ${c.country_code}</span>
+        `<a class="city-result-row" href="/${c.slug}" data-link>
+          <div>
+            <div class="city-result-name">${c.name}</div>
+            <div class="city-result-meta">${c.region ?? ''} · ${c.country_code}</div>
+          </div>
+          <span class="city-result-arrow">→</span>
         </a>`
-      ).join('') || '<p class="no-results">No cities found</p>'
+      ).join('') || `<div class="city-result-row"><span class="city-result-meta">No cities found</span></div>`
     }, 300)
   })
 }

@@ -2,35 +2,21 @@ import { apiFetch, isLoggedIn } from '../auth'
 import { navigate } from '../router'
 import { renderNotificationBell } from '../components/notifications'
 import { getCityConfig } from '../lib/city-config'
-import { renderNavbar } from '../components/navbar'
+import { renderNavbar, makeAvatar } from '../components/navbar'
 
 export async function renderCity(el: HTMLElement, { city }: { city: string }) {
   const config = await getCityConfig(city)
-
-  // Apply city theme color
   document.documentElement.style.setProperty('--primary', config.theme.primary)
 
   el.innerHTML = `
     ${await renderNavbar(city, config)}
-    <main class="city-layout">
-      <aside class="filters">
-        <h3>Filter</h3>
-        <select id="filter-label">
-          <option value="">All posts</option>
-          ${config.categories.map(c => `<option value="${c}">${c}</option>`).join('')}
-        </select>
-        ${config.districts.length ? `
-          <h3 style="margin-top:1rem">District</h3>
-          <select id="filter-district">
-            <option value="">All districts</option>
-            ${config.districts.map(d => `<option value="${d}">${d}</option>`).join('')}
-          </select>
-        ` : ''}
-      </aside>
-      <section id="posts-list" class="posts-list">
-        <div class="loading">Loading posts...</div>
-      </section>
-    </main>
+    <div class="feed-container">
+      <div class="feed-filters" id="feed-filters">
+        <button class="filter-pill active" data-label="">All</button>
+        ${config.categories.map(c => `<button class="filter-pill" data-label="${c}">${c}</button>`).join('')}
+      </div>
+      <div id="posts-list"></div>
+    </div>
     <div id="post-modal" class="modal hidden"></div>
   `
 
@@ -39,75 +25,95 @@ export async function renderCity(el: HTMLElement, { city }: { city: string }) {
     el.querySelector('#btn-logout')?.addEventListener('click', () => {
       import('../auth').then(m => m.logout())
     })
-    el.querySelector('#btn-new-post')?.addEventListener('click', () => {
-      showNewPostModal(el.querySelector('#post-modal')!, city, config.categories)
-    })
+    const openModal = () => showNewPostModal(el.querySelector('#post-modal')!, city, config.categories)
+    el.querySelector('#btn-new-post')?.addEventListener('click', openModal)
+    el.querySelector('#bottom-compose')?.addEventListener('click', openModal)
   }
 
-  el.querySelector('#filter-label')?.addEventListener('change', (e) => {
-    loadPosts(el.querySelector('#posts-list')!, city, (e.target as HTMLSelectElement).value)
+  let activeLabel = ''
+  el.querySelector('#feed-filters')?.addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('.filter-pill')
+    if (!btn) return
+    el.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'))
+    btn.classList.add('active')
+    activeLabel = btn.dataset.label ?? ''
+    loadPosts(el.querySelector('#posts-list')!, city, activeLabel)
   })
 
   await loadPosts(el.querySelector('#posts-list')!, city, '')
 }
 
 async function loadPosts(container: HTMLElement, city: string, label: string) {
-  container.innerHTML = '<div class="loading">Loading...</div>'
+  container.innerHTML = '<div class="loading">Loading…</div>'
   const qs = label ? `?label=${label}` : ''
   const res = await apiFetch(`/${city}/posts${qs}`)
-  if (!res.ok) { container.innerHTML = '<p class="error">Failed to load posts</p>'; return }
+  if (!res.ok) { container.innerHTML = '<p class="empty-state">Failed to load posts.</p>'; return }
   const posts: any[] = await res.json()
 
   if (!posts.length) {
-    container.innerHTML = '<p class="empty">No posts yet. Be the first!</p>'
+    container.innerHTML = '<p class="empty-state">No posts yet — be the first!</p>'
     return
   }
 
-  container.innerHTML = posts.map(post => `
-    <article class="post-card">
-      <div class="post-meta">
-        <span class="post-labels">${(post.labels ?? []).map((l: any) => `<span class="label">${l.name}</span>`).join('')}</span>
-        <span class="post-date">${timeAgo(post.created_at)}</span>
+  container.innerHTML = posts.map(post => {
+    const authorLabel = post.author === 'anonymous' ? 'anonymous' : (post.author ?? 'unknown')
+    const isAnon = post.author === 'anonymous'
+    const avatarEl = isAnon
+      ? `<div class="avatar anon" style="width:36px;height:36px">🕵️</div>`
+      : makeAvatar(authorLabel)
+    const categories = (post.labels ?? []).filter((l: any) => l.name !== 'post')
+    return `
+      <div class="feed-post" role="article">
+        <div class="post-left">
+          ${avatarEl}
+          <div class="thread-line"></div>
+        </div>
+        <div class="post-right">
+          <div class="post-header">
+            <span class="post-username">${isAnon ? 'Anonymous' : `@${escHtml(authorLabel)}`}</span>
+            <span class="post-time">${timeAgo(post.created_at)}</span>
+          </div>
+          ${categories.length ? `<span class="post-category-pill">${escHtml(categories[0].name)}</span>` : ''}
+          <a href="/${city}/posts/${post.number}" data-link class="post-title-feed">${escHtml(post.title)}</a>
+          <div class="post-actions">
+            <a href="/${city}/posts/${post.number}" data-link class="post-action-btn">
+              💬 <span>${post.comments}</span>
+            </a>
+          </div>
+        </div>
       </div>
-      <h2 class="post-title">
-        <a href="/${city}/posts/${post.number}" data-link>${escHtml(post.title)}</a>
-      </h2>
-      <div class="post-footer">
-        <span class="post-author">${post.author === 'anonymous' ? '🕵️ anonymous' : post.author ? `@${escHtml(post.author)}` : ''}</span>
-        <span class="post-comments">💬 ${post.comments} comments</span>
-      </div>
-    </article>
-  `).join('')
+    `
+  }).join('')
 }
 
 function showNewPostModal(modal: HTMLElement, city: string, categories: string[]) {
   modal.classList.remove('hidden')
   modal.innerHTML = `
-    <div class="modal-box">
-      <h2>New Post</h2>
-      <form id="new-post-form">
-        <input name="title" placeholder="Title" required />
-        <textarea name="content" placeholder="What's on your mind?" rows="5" required></textarea>
-        <select name="label">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-title">New Post</div>
+      <form id="new-post-form" style="display:flex;flex-direction:column;gap:0.75rem">
+        <input class="modal-input" name="title" placeholder="Title" required />
+        <textarea class="modal-input modal-textarea" name="content" placeholder="What's happening in ${city}?" rows="4" required></textarea>
+        <select class="modal-input modal-select" name="label">
           <option value="">No category</option>
           ${categories.map(c => `<option value="${c}">${c}</option>`).join('')}
         </select>
         <label class="anon-toggle">
           <input type="checkbox" name="anonymous" />
-          Post anonymously (for whistleblowing)
+          Post anonymously (whistleblow)
         </label>
-        <div class="form-actions">
-          <button type="button" id="cancel-post">Cancel</button>
-          <button type="submit">Publish</button>
+        <p id="post-error" class="error-msg hidden"></p>
+        <div class="modal-footer">
+          <button type="button" class="modal-cancel" id="cancel-post">Cancel</button>
+          <button type="submit" class="modal-publish">Publish</button>
         </div>
-        <p id="post-error" class="error hidden"></p>
       </form>
     </div>
   `
 
-  modal.querySelector('#cancel-post')?.addEventListener('click', () => {
-    modal.classList.add('hidden')
-  })
+  modal.querySelector('#cancel-post')?.addEventListener('click', () => modal.classList.add('hidden'))
+  modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.add('hidden') })
 
   modal.querySelector('#new-post-form')?.addEventListener('submit', async (e) => {
     e.preventDefault()
@@ -135,12 +141,13 @@ function showNewPostModal(modal: HTMLElement, city: string, categories: string[]
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime()
   const m = Math.floor(diff / 60000)
-  if (m < 60) return `${m}m ago`
+  if (m < 1) return 'now'
+  if (m < 60) return `${m}m`
   const h = Math.floor(m / 60)
-  if (h < 24) return `${h}h ago`
-  return `${Math.floor(h / 24)}d ago`
+  if (h < 24) return `${h}h`
+  return `${Math.floor(h / 24)}d`
 }
 
 function escHtml(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
 }

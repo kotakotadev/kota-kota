@@ -1,14 +1,20 @@
-import { apiFetch, isLoggedIn, getUser } from '../auth'
+import { apiFetch, isLoggedIn } from '../auth'
+import { makeAvatar } from '../components/navbar'
+import { APP_NAME } from '../config'
 
 export async function renderPost(el: HTMLElement, { city, id }: { city: string; id: string }) {
   el.innerHTML = `
-    <nav class="navbar">
-      <a href="/${city}" data-link>← Back to ${city}</a>
-    </nav>
-    <main class="post-detail">
-      <div id="post-content" class="loading">Loading post...</div>
-      <section id="comments-section"></section>
-    </main>
+    <header class="top-bar">
+      <div class="top-bar-left">
+        <a href="/${city}" data-link class="brand-name">${APP_NAME}</a>
+        <span class="city-badge">${city}</span>
+      </div>
+    </header>
+    <div class="post-detail-wrap">
+      <a href="/${city}" data-link class="post-detail-back">← Back</a>
+      <div id="post-content"><div class="loading">Loading…</div></div>
+      <div id="comments-section"></div>
+    </div>
   `
 
   const [postRes, commentsRes] = await Promise.all([
@@ -17,81 +23,105 @@ export async function renderPost(el: HTMLElement, { city, id }: { city: string; 
   ])
 
   if (!postRes.ok) {
-    el.querySelector('#post-content')!.innerHTML = '<p class="error">Post not found</p>'
+    el.querySelector('#post-content')!.innerHTML = '<p class="empty-state">Post not found.</p>'
     return
   }
 
   const post = await postRes.json()
   const comments: any[] = commentsRes.ok ? await commentsRes.json() : []
-
-  // Parse metadata from issue body
   const bodyClean = post.body.replace(/<!--citypage:.*?-->/gs, '').trim()
+  const isAnon = post.author === 'anonymous'
+  const authorLabel = isAnon ? 'Anonymous' : (post.author ?? 'unknown')
+  const avatarEl = isAnon
+    ? `<div class="avatar anon" style="width:36px;height:36px">🕵️</div>`
+    : makeAvatar(authorLabel)
+  const categories = (post.labels ?? []).filter((l: any) => l.name !== 'post')
 
   el.querySelector('#post-content')!.innerHTML = `
-    <article class="post-full">
-      <div class="post-labels">
-        ${(post.labels ?? []).map((l: any) => `<span class="label">${l.name}</span>`).join('')}
+    <div class="post-detail-main">
+      <div class="post-left" style="align-items:center">
+        ${avatarEl}
       </div>
-      <h1>${escHtml(post.title)}</h1>
-      <div class="post-body">${renderMarkdown(bodyClean)}</div>
-      <div class="post-meta-bar">
-        <span>${post.author === 'anonymous' ? '🕵️ anonymous' : post.author ? `@${escHtml(post.author)}` : ''}</span>
-        <span>${timeAgo(post.created_at)}</span>
-        <span>💬 ${post.comments} comments</span>
+      <div class="post-detail-content">
+        <div class="post-header">
+          <span class="post-username">${isAnon ? 'Anonymous' : `@${escHtml(authorLabel)}`}</span>
+          <span class="post-time">${timeAgo(post.created_at)}</span>
+        </div>
+        ${categories.length ? `<span class="post-category-pill">${escHtml(categories[0].name)}</span>` : ''}
+        <h1 class="post-detail-title">${escHtml(post.title)}</h1>
+        <div class="post-detail-body">${renderMarkdown(bodyClean)}</div>
+        <div class="post-detail-meta">
+          <span>${new Date(post.created_at).toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' })}</span>
+          <span>💬 ${post.comments} comment${post.comments !== 1 ? 's' : ''}</span>
+        </div>
       </div>
-    </article>
+    </div>
   `
 
   renderComments(el.querySelector('#comments-section')!, comments, city, id)
 }
 
 function renderComments(container: HTMLElement, comments: any[], city: string, postId: string) {
-  const user = getUser()
+  const commentsHtml = comments.map(c => {
+    const bodyClean = c.body.replace(/<!--citypage-comment:.*?-->/gs, '').trim()
+    const name = c.user?.login ?? 'user'
+    return `
+      <div class="comment-item">
+        <div class="post-left">${makeAvatar(name, 30)}</div>
+        <div class="comment-right">
+          <div class="post-header">
+            <span class="post-username" style="font-size:0.875rem">@${escHtml(name)}</span>
+            <span class="post-time">${timeAgo(c.created_at)}</span>
+          </div>
+          <div class="comment-body">${renderMarkdown(bodyClean)}</div>
+        </div>
+      </div>
+    `
+  }).join('')
 
   container.innerHTML = `
-    <h2>${comments.length} Comments</h2>
-    <div id="comments-list">
-      ${comments.map(c => {
-        const bodyClean = c.body.replace(/<!--citypage-comment:.*?-->/gs, '').trim()
-        return `
-          <div class="comment">
-            <div class="comment-body">${renderMarkdown(bodyClean)}</div>
-            <span class="comment-date">${timeAgo(c.created_at)}</span>
-          </div>
-        `
-      }).join('')}
+    <div class="comments-wrap">
+      ${comments.length ? `<div class="comments-label">${comments.length} repl${comments.length !== 1 ? 'ies' : 'y'}</div>` : ''}
+      ${commentsHtml}
+      ${isLoggedIn()
+        ? `<div class="comment-input-area">
+             ${makeAvatar('me', 32)}
+             <textarea class="comment-input" id="comment-input" placeholder="Add a reply…" rows="1"></textarea>
+             <button class="comment-send-btn" id="comment-send">Reply</button>
+           </div>
+           <p id="comment-error" class="error-msg hidden" style="padding:0 1rem 0.5rem"></p>`
+        : `<div class="login-to-comment">
+             <a href="/login?city=${city}" data-link>Login to reply</a>
+           </div>`
+      }
     </div>
-    ${isLoggedIn() ? `
-      <form id="comment-form" class="comment-form">
-        <textarea name="content" placeholder="Write a comment..." rows="3" required></textarea>
-        <button type="submit">Post Comment</button>
-        <p id="comment-error" class="error hidden"></p>
-      </form>
-    ` : `<p><a href="/login?city=${city}" data-link>Login to comment</a></p>`}
   `
 
-  container.querySelector('#comment-form')?.addEventListener('submit', async (e) => {
-    e.preventDefault()
-    const form = e.target as HTMLFormElement
-    const content = (form.elements.namedItem('content') as HTMLTextAreaElement).value
+  const input = container.querySelector<HTMLTextAreaElement>('#comment-input')
+  input?.addEventListener('input', () => {
+    input.style.height = 'auto'
+    input.style.height = input.scrollHeight + 'px'
+  })
+
+  container.querySelector('#comment-send')?.addEventListener('click', async () => {
+    const content = input?.value.trim()
+    if (!content) return
     const res = await apiFetch(`/${city}/posts/${postId}/comments`, {
       method: 'POST',
       body: JSON.stringify({ content })
     })
     if (!res.ok) {
       const err = container.querySelector<HTMLElement>('#comment-error')!
-      err.textContent = (await res.json()).error ?? 'Failed to comment'
+      err.textContent = (await res.json()).error ?? 'Failed to post reply'
       err.classList.remove('hidden')
       return
     }
-    // Reload comments
     const fresh = await apiFetch(`/${city}/posts/${postId}/comments`)
     const updated = fresh.ok ? await fresh.json() : []
     renderComments(container, updated, city, postId)
   })
 }
 
-// Minimal markdown: bold, italic, code, line breaks
 function renderMarkdown(text: string): string {
   return text
     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
@@ -106,10 +136,11 @@ function renderMarkdown(text: string): string {
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime()
   const m = Math.floor(diff / 60000)
-  if (m < 60) return `${m}m ago`
+  if (m < 1) return 'now'
+  if (m < 60) return `${m}m`
   const h = Math.floor(m / 60)
-  if (h < 24) return `${h}h ago`
-  return `${Math.floor(h / 24)}d ago`
+  if (h < 24) return `${h}h`
+  return `${Math.floor(h / 24)}d`
 }
 
 function escHtml(s: string): string {

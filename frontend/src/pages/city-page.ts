@@ -21,17 +21,15 @@ export async function renderCityPage(
 
   el.innerHTML = `
     ${await renderNavbar(city, config)}
-    <main class="city-page-layout">
-      <article class="city-page-content">
-        ${markdown
-          ? `<h1>${label}</h1><div class="md-body"><p>${renderMarkdown(markdown)}</p></div>`
-          : `<div class="not-found">
-               <h2>${label}</h2>
-               <p>This page hasn't been set up yet by the city admin.</p>
-               <p>City admins can create <code>pages/${page}.md</code> in the city's GitHub repo.</p>
-             </div>`
-        }
-      </article>
-    </main>
+    <div class="city-page-wrap">
+      ${markdown
+        ? `<h1>${label}</h1><div class="md-body">${renderMarkdown(markdown)}</div>`
+        : `<div class="not-found-page">
+             <h2>${label}</h2>
+             <p>This page hasn't been set up yet.</p>
+             <p>City admins can create <code>pages/${page}.md</code> in the city's GitHub repo.</p>
+           </div>`
+      }
+    </div>
   `
 }
