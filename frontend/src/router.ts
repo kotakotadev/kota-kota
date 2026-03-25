@@ -22,8 +22,9 @@ export function navigate(path: string) {
 }
 
 function dispatch(path: string) {
+  const pathname = path.split('?')[0]
   for (const { pattern, keys, handler } of routes) {
-    const match = path.match(pattern)
+    const match = pathname.match(pattern)
     if (match) {
       const params: Record<string, string> = {}
       keys.forEach((k, i) => { params[k] = match[i + 1] })
@@ -39,7 +40,8 @@ export function startRouter() {
     const link = (e.target as HTMLElement).closest('a[data-link]')
     if (link) {
       e.preventDefault()
-      navigate((link as HTMLAnchorElement).pathname)
+      const a = link as HTMLAnchorElement
+      navigate(a.pathname + a.search)
     }
   })
   dispatch(location.pathname)
