@@ -56,6 +56,7 @@ export async function renderNavbar(city: string, config: CityConfig): Promise<st
         <a href="/${city}" data-link class="city-badge">${config.name || city}</a>
       </div>
       <div class="top-bar-right">
+        <a href="/${city}/tenants" data-link class="top-bar-link top-bar-desktop-only">Places</a>
         ${loggedIn
           ? `<span id="notif-bell" class="notif-wrap"></span>
              <button id="btn-new-post" class="top-bar-btn">Post</button>

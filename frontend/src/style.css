@@ -995,9 +995,13 @@ img { display: block; max-width: 100%; }
 .hidden { display: none !important; }
 
 /* ── DESKTOP ─────────────────────────────────────── */
+/* Hidden on mobile, shown on desktop */
+.top-bar-desktop-only { display: none; }
+
 @media (min-width: 768px) {
   body { padding-bottom: 0; }
   .bottom-nav { display: none; }
+  .top-bar-desktop-only { display: inline-flex; }
 
   .top-bar {
     padding: 0 2rem;
