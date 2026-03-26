@@ -1,0 +1,9 @@
+# CF Pages _redirects — proxy all non-asset requests to the Worker (SSR + JSON API)
+# The Worker serves:
+#   GET /               → SSR home HTML
+#   GET /:city          → SSR city feed HTML
+#   GET /:city/posts/:id → SSR post detail HTML
+#   /api/*              → JSON API
+
+/api/*  https://kotakotadev-api.kotakota-developer.workers.dev/api/:splat  200
+/*      https://kotakotadev-api.kotakota-developer.workers.dev/:splat      200

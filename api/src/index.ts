@@ -3,6 +3,7 @@ import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
 import type { Bindings, Variables } from './types'
 
+// JSON API routes (all under /api/)
 import auth from './routes/auth'
 import cities from './routes/cities'
 import posts from './routes/posts'
@@ -11,6 +12,11 @@ import tenants from './routes/tenants'
 import notifications from './routes/notifications'
 import uploads from './routes/uploads'
 import webhooks from './routes/webhooks'
+
+// SSR HTML routes (at root /)
+import ssrHome from './routes/ssr/home'
+import ssrCity from './routes/ssr/city'
+import ssrPost from './routes/ssr/post'
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
@@ -25,25 +31,28 @@ app.use('*', cors({
   credentials: true
 }))
 
-app.get('/', (c) => c.json({ service: `${c.env.APP_NAME} API`, status: 'ok' }))
+// ── JSON API routes ────────────────────────────────────────────────────────────
+app.get('/api', (c) => c.json({ service: `${c.env.APP_NAME} API`, status: 'ok' }))
 
-app.route('/auth', auth)
-app.route('/cities', cities)
-app.route('/uploads', uploads)
-app.route('/notifications', notifications)
-app.route('/webhooks', webhooks)
+app.route('/api/auth', auth)
+app.route('/api/cities', cities)
+app.route('/api/uploads', uploads)
+app.route('/api/notifications', notifications)
+app.route('/api/webhooks', webhooks)
 
-// City-scoped routes: /:city/posts, /:city/tenants
-app.route('/:city/posts/:postId/comments', comments)
-app.route('/:city/posts', posts)
-app.route('/:city/tenants', tenants)
+// City-scoped JSON routes
+app.route('/api/:city/posts/:postId/comments', comments)
+app.route('/api/:city/posts', posts)
+app.route('/api/:city/tenants', tenants)
 
-// Users
-app.patch('/users/:id/verify', async (c) => {
-  // superadmin verifies a user
-  const { Bindings: b, Variables: v } = c as any
+app.patch('/api/users/:id/verify', async (c) => {
   return c.json({ message: 'not implemented' })
 })
+
+// ── SSR HTML routes ────────────────────────────────────────────────────────────
+app.route('/', ssrHome)
+app.route('/', ssrPost)    // /:city/posts/:id — must be before /:city
+app.route('/', ssrCity)    // /:city
 
 app.notFound((c) => c.json({ error: 'Not found' }, 404))
 app.onError((err, c) => {

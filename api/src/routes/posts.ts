@@ -96,7 +96,7 @@ posts.post('/', authMiddleware, requireRole('user'), async (c) => {
 
   // Purge feed cache so new post appears
   c.executionCtx.waitUntil(
-    purgeCache([`${c.env.API_URL}/${citySlug}/posts`])
+    purgeCache([`${c.env.API_URL}/api/${citySlug}/posts`])
   )
 
   return c.json({ id: issue.number, url: issue.html_url }, 201)
@@ -124,8 +124,8 @@ posts.delete('/:id', authMiddleware, async (c) => {
   // Purge post + feed cache
   c.executionCtx.waitUntil(
     purgeCache([
-      `${c.env.API_URL}/${citySlug}/posts`,
-      `${c.env.API_URL}/${citySlug}/posts/${issueNumber}`
+      `${c.env.API_URL}/api/${citySlug}/posts`,
+      `${c.env.API_URL}/api/${citySlug}/posts/${issueNumber}`
     ])
   )
 

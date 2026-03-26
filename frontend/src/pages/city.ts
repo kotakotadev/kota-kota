@@ -2,10 +2,33 @@ import { apiFetch, isLoggedIn } from '../auth'
 import { navigate } from '../router'
 import { renderNotificationBell } from '../components/notifications'
 import { getCityConfig } from '../lib/city-config'
+import type { CityConfig } from '../lib/city-config'
 import { renderNavbar, makeAvatar } from '../components/navbar'
 
+/** Consume SSR data if it matches this page/city — avoids loading flash */
+function consumeSSR(page: string, city: string): any | null {
+  const raw = (window as any).__SSR__
+  if (!raw || raw.page !== page || raw.city !== city) return null
+  delete (window as any).__SSR__
+  return raw
+}
+
 export async function renderCity(el: HTMLElement, { city }: { city: string }) {
-  const config = await getCityConfig(city)
+  const ssr = consumeSSR('city', city)
+
+  let config: CityConfig
+  let posts: any[]
+
+  if (ssr) {
+    config = ssr.config
+    posts = ssr.posts
+  } else {
+    el.innerHTML = '<div class="loading">Loading…</div>'
+    config = await getCityConfig(city)
+    const res = await apiFetch(`/${city}/posts`)
+    posts = res.ok ? await res.json() : []
+  }
+
   document.documentElement.style.setProperty('--primary', config.theme.primary)
 
   el.innerHTML = `
@@ -40,7 +63,13 @@ export async function renderCity(el: HTMLElement, { city }: { city: string }) {
     loadPosts(el.querySelector('#posts-list')!, city, activeLabel)
   })
 
-  await loadPosts(el.querySelector('#posts-list')!, city, '')
+  // Render posts — use SSR data for initial load (no flash), then client manages filters
+  const postsEl = el.querySelector('#posts-list')!
+  if (ssr) {
+    renderPostsList(postsEl, posts, city)
+  } else {
+    await loadPosts(postsEl, city, '')
+  }
 }
 
 async function loadPosts(container: HTMLElement, city: string, label: string) {
@@ -49,7 +78,10 @@ async function loadPosts(container: HTMLElement, city: string, label: string) {
   const res = await apiFetch(`/${city}/posts${qs}`)
   if (!res.ok) { container.innerHTML = '<p class="empty-state">Failed to load posts.</p>'; return }
   const posts: any[] = await res.json()
+  renderPostsList(container, posts, city)
+}
 
+function renderPostsList(container: HTMLElement, posts: any[], city: string) {
   if (!posts.length) {
     container.innerHTML = '<p class="empty-state">No posts yet — be the first!</p>'
     return

@@ -53,7 +53,7 @@ cities.post('/', authMiddleware, requireRole('superadmin'), async (c) => {
 
   // Purge city list cache
   c.executionCtx.waitUntil(
-    purgeCache([`${c.env.API_URL}/cities`])
+    purgeCache([`${c.env.API_URL}/api/cities`])
   )
 
   return c.json({ id, slug, github_repo: githubRepo }, 201)

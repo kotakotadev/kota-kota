@@ -2,43 +2,61 @@ import { apiFetch, isLoggedIn, logout } from '../auth'
 import { makeAvatar } from '../components/navbar'
 import { APP_NAME } from '../config'
 
+function consumeSSR(page: string, city: string, postId: string): any | null {
+  const raw = (window as any).__SSR__
+  if (!raw || raw.page !== page || raw.city !== city || String(raw.postId) !== postId) return null
+  delete (window as any).__SSR__
+  return raw
+}
+
 export async function renderPost(el: HTMLElement, { city, id }: { city: string; id: string }) {
-  el.innerHTML = `
-    <header class="top-bar">
-      <div class="top-bar-left">
-        <a href="/${city}" data-link class="brand-name">${APP_NAME}</a>
-        <a href="/${city}" data-link class="city-badge">${city}</a>
+  const ssr = consumeSSR('post', city, id)
+
+  let post: any
+  let comments: any[]
+
+  if (ssr) {
+    post = ssr.post
+    comments = ssr.comments
+  } else {
+    el.innerHTML = `
+      <header class="top-bar">
+        <div class="top-bar-left">
+          <a href="/${city}" data-link class="brand-name">${APP_NAME}</a>
+          <a href="/${city}" data-link class="city-badge">${city}</a>
+        </div>
+        <div class="top-bar-right">
+          ${isLoggedIn()
+            ? `<button id="post-logout" class="top-bar-link">Logout</button>`
+            : `<a href="/login?city=${city}" data-link class="top-bar-link">Login</a>
+               <a href="/register?city=${city}" data-link class="top-bar-btn">Join</a>`
+          }
+        </div>
+      </header>
+      <div class="post-detail-wrap">
+        <a href="/${city}" data-link class="post-detail-back">← Back</a>
+        <div id="post-content"><div class="loading">Loading…</div></div>
+        <div id="comments-section"></div>
       </div>
-      <div class="top-bar-right">
-        ${isLoggedIn()
-          ? `<button id="post-logout" class="top-bar-link">Logout</button>`
-          : `<a href="/login?city=${city}" data-link class="top-bar-link">Login</a>
-             <a href="/register?city=${city}" data-link class="top-bar-btn">Join</a>`
-        }
-      </div>
-    </header>
-    <div class="post-detail-wrap">
-      <a href="/${city}" data-link class="post-detail-back">← Back</a>
-      <div id="post-content"><div class="loading">Loading…</div></div>
-      <div id="comments-section"></div>
-    </div>
-  `
+    `
 
-  el.querySelector('#post-logout')?.addEventListener('click', () => logout())
+    el.querySelector('#post-logout')?.addEventListener('click', () => logout())
 
-  const [postRes, commentsRes] = await Promise.all([
-    apiFetch(`/${city}/posts/${id}`),
-    apiFetch(`/${city}/posts/${id}/comments`)
-  ])
+    const [postRes, commentsRes] = await Promise.all([
+      apiFetch(`/${city}/posts/${id}`),
+      apiFetch(`/${city}/posts/${id}/comments`)
+    ])
 
-  if (!postRes.ok) {
-    el.querySelector('#post-content')!.innerHTML = '<p class="empty-state">Post not found.</p>'
-    return
+    if (!postRes.ok) {
+      el.querySelector('#post-content')!.innerHTML = '<p class="empty-state">Post not found.</p>'
+      return
+    }
+
+    post = await postRes.json()
+    comments = commentsRes.ok ? await commentsRes.json() : []
   }
 
-  const post = await postRes.json()
-  const comments: any[] = commentsRes.ok ? await commentsRes.json() : []
-  const bodyClean = post.body.replace(/<!--citypage:.*?-->/gs, '').trim()
+  const bodyClean = post.body?.replace(/<!--citypage:.*?-->/gs, '').trim() ?? ''
   const isAnon = post.author === 'anonymous'
   const authorLabel = isAnon ? 'Anonymous' : (post.author ?? 'unknown')
   const avatarEl = isAnon
@@ -46,11 +64,9 @@ export async function renderPost(el: HTMLElement, { city, id }: { city: string; 
     : makeAvatar(authorLabel)
   const categories = (post.labels ?? []).filter((l: any) => l.name !== 'post')
 
-  el.querySelector('#post-content')!.innerHTML = `
+  const postHtml = `
     <div class="post-detail-main">
-      <div class="post-left" style="align-items:center">
-        ${avatarEl}
-      </div>
+      <div class="post-left" style="align-items:center">${avatarEl}</div>
       <div class="post-detail-content">
         <div class="post-header">
           <span class="post-username">${isAnon ? 'Anonymous' : `@${escHtml(authorLabel)}`}</span>
@@ -67,16 +83,32 @@ export async function renderPost(el: HTMLElement, { city, id }: { city: string; 
     </div>
   `
 
-  renderComments(el.querySelector('#comments-section')!, comments, city, id)
+  if (ssr) {
+    // SSR page: update auth-area and inject post HTML over static content
+    const authArea = el.querySelector<HTMLElement>('#auth-area')
+    if (authArea) {
+      authArea.innerHTML = isLoggedIn()
+        ? `<button id="post-logout" class="top-bar-link">Logout</button>`
+        : `<a href="/login?city=${city}" data-link class="top-bar-link">Login</a>
+           <a href="/register?city=${city}" data-link class="top-bar-btn">Join</a>`
+      el.querySelector('#post-logout')?.addEventListener('click', () => logout())
+    }
+    // Update post content if body was stripped of metadata
+    const postContentEl = el.querySelector('#post-content')
+    if (postContentEl) postContentEl.innerHTML = postHtml
+    renderComments(el.querySelector('#comments-section')!, comments, city, id)
+  } else {
+    el.querySelector('#post-content')!.innerHTML = postHtml
+    renderComments(el.querySelector('#comments-section')!, comments, city, id)
+  }
 }
 
 function renderComments(container: HTMLElement, comments: any[], city: string, postId: string) {
   const commentsHtml = comments.map(c => {
-    // Body format: "**@username**\n\ncontent\n\n<!--citypage-comment:...-->"
     const withoutMeta = c.body.replace(/<!--citypage-comment:.*?-->/gs, '').trim()
-    const usernameMatch = withoutMeta.match(/^\*\*@([^\*]+)\*\*/)
+    const usernameMatch = withoutMeta.match(/^\*\*@([^*]+)\*\*/)
     const name = usernameMatch ? usernameMatch[1] : (c.user?.login ?? 'user')
-    const bodyClean = withoutMeta.replace(/^\*\*@[^\*]+\*\*\s*/,'').trim()
+    const bodyClean = withoutMeta.replace(/^\*\*@[^*]+\*\*\s*/,'').trim()
     return `
       <div class="comment-item">
         <div class="post-left">${makeAvatar(name, 30)}</div>
