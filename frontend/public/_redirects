@@ -1,9 +1,18 @@
-# CF Pages _redirects — proxy all non-asset requests to the Worker (SSR + JSON API)
-# The Worker serves:
-#   GET /               → SSR home HTML
-#   GET /:city          → SSR city feed HTML
-#   GET /:city/posts/:id → SSR post detail HTML
-#   /api/*              → JSON API
+# CF Pages _redirects — SSR proxy + SPA fallback
+# Rules are evaluated TOP TO BOTTOM (first match wins)
 
+# 1. JSON API — proxy to Worker
 /api/*  https://kotakotadev-api.kotakota-developer.workers.dev/api/:splat  200
-/*      https://kotakotadev-api.kotakota-developer.workers.dev/:splat      200
+
+# 2. SPA-only routes — serve index.html directly (no SSR needed)
+/login      /index.html  200
+/register   /index.html  200
+
+# 3. SSR post detail — Worker renders HTML with post + comments
+/:city/posts/:id  https://kotakotadev-api.kotakota-developer.workers.dev/:city/posts/:id  200
+
+# 4. SSR city feed — Worker renders HTML with posts list
+/:city  https://kotakotadev-api.kotakota-developer.workers.dev/:city  200
+
+# 5. Home + everything else — SPA index.html
+/*  /index.html  200
