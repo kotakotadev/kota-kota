@@ -3,6 +3,7 @@ import { renderHome } from './pages/home'
 import { renderCity } from './pages/city'
 import { renderPost } from './pages/post'
 import { renderTenants } from './pages/tenants'
+import { renderTenant } from './pages/tenant'
 import { renderLogin, renderRegister } from './pages/login'
 import { renderCityPage } from './pages/city-page'
 
@@ -17,6 +18,7 @@ on('/register', () => renderRegister(app))
 on('/:city', ({ city }) => renderCity(app, { city }))
 on('/:city/posts/:id', ({ city, id }) => renderPost(app, { city, id }))
 on('/:city/tenants', ({ city }) => renderTenants(app, { city }))
+on('/:city/tenants/:slug', ({ city, slug }) => renderTenant(app, { city, slug }))
 
 // City custom pages (served from pages/*.md in city repo)
 on('/:city/about',   ({ city }) => renderCityPage(app, { city, page: 'about' }))
