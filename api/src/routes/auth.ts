@@ -22,7 +22,7 @@ auth.post('/register', async (c) => {
   try {
     await c.env.DB.prepare(
       `INSERT INTO users (id, city_id, username, email, password_hash, global_role, created_at)
-       VALUES (?, ?, ?, ?, ?, 'visitor', ?)`
+       VALUES (?, ?, ?, ?, ?, 'user', ?)`
     ).bind(id, city.id, username, email, hash, now).run()
   } catch {
     return c.json({ error: 'Username or email already taken' }, 409)
