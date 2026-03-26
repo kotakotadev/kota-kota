@@ -44,7 +44,8 @@ export async function renderCity(el: HTMLElement, { city }: { city: string }) {
   `
 
   if (isLoggedIn()) {
-    renderNotificationBell(el.querySelector('#notif-bell')!, city)
+    const notifEl = el.querySelector('#notif-bell') ?? el.querySelector('#notif-bell-mobile')
+    if (notifEl) renderNotificationBell(notifEl as HTMLElement, city)
     const doLogout = () => import('../auth').then(m => m.logout())
     el.querySelector('#btn-logout')?.addEventListener('click', doLogout)
     el.querySelector('#btn-logout-mobile')?.addEventListener('click', doLogout)

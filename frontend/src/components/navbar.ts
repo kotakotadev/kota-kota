@@ -48,17 +48,50 @@ function bottomNav(city: string, loggedIn: boolean): string {
 
 export async function renderNavbar(city: string, config: CityConfig): Promise<string> {
   const loggedIn = isLoggedIn()
+  const cityName = config.name || city
 
   return `
+    <!-- Desktop sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <a href="/" data-link class="brand-name">${APP_NAME}</a>
+        <a href="/${city}" data-link class="city-badge">${cityName}</a>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="/${city}" data-link class="sidebar-link">
+          <span class="sidebar-icon">⌂</span><span>Home</span>
+        </a>
+        <a href="/${city}/tenants" data-link class="sidebar-link">
+          <span class="sidebar-icon">⊞</span><span>Places</span>
+        </a>
+        <a href="/" data-link class="sidebar-link">
+          <span class="sidebar-icon">◎</span><span>Cities</span>
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        ${loggedIn
+          ? `<span id="notif-bell" class="notif-wrap"></span>
+             <button id="btn-new-post" class="sidebar-post-btn">+ Post</button>
+             <button id="btn-logout" class="sidebar-link sidebar-logout">
+               <span class="sidebar-icon">↩</span><span>Logout</span>
+             </button>`
+          : `<a href="/login?city=${city}" data-link class="sidebar-link">
+               <span class="sidebar-icon">👤</span><span>Login</span>
+             </a>
+             <a href="/register?city=${city}" data-link class="sidebar-post-btn">Join</a>`
+        }
+      </div>
+    </aside>
+
+    <!-- Mobile top bar -->
     <header class="top-bar">
       <div class="top-bar-left">
         <a href="/" data-link class="brand-name">${APP_NAME}</a>
-        <a href="/${city}" data-link class="city-badge">${config.name || city}</a>
+        <a href="/${city}" data-link class="city-badge">${cityName}</a>
       </div>
       <div class="top-bar-right">
-        <a href="/${city}/tenants" data-link class="top-bar-link top-bar-desktop-only">Places</a>
         ${loggedIn
-          ? `<span id="notif-bell" class="notif-wrap"></span>
+          ? `<span id="notif-bell-mobile" class="notif-wrap"></span>
              <button id="btn-new-post" class="top-bar-btn">Post</button>
              <button id="btn-logout" class="top-bar-link">Logout</button>`
           : `<a href="/login?city=${city}" data-link class="top-bar-link">Login</a>
@@ -66,6 +99,7 @@ export async function renderNavbar(city: string, config: CityConfig): Promise<st
         }
       </div>
     </header>
+
     ${bottomNav(city, loggedIn)}
   `
 }
