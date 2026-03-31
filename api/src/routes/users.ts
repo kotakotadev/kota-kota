@@ -54,7 +54,9 @@ users.post('/me/avatar', authMiddleware, async (c) => {
   // Client always sends JPEG after canvas resize; force consistent content-type
   const contentType = file.type === 'image/gif' ? 'image/gif' : 'image/jpeg'
   const key = `avatars/${userId}`
-  await c.env.R2.put(key, await file.arrayBuffer(), { httpMetadata: { contentType } })
+  await c.env.R2.put(key, await file.arrayBuffer(), {
+    httpMetadata: { contentType, cacheControl: 'public, max-age=31536000, immutable' }
+  })
   const url = `${c.env.UPLOADS_URL}/${key}?v=${Date.now()}`
   await c.env.DB.prepare('UPDATE users SET avatar_url = ? WHERE id = ?').bind(url, userId).run()
   return c.json({ url })
