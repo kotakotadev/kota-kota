@@ -55,7 +55,7 @@ users.post('/me/avatar', authMiddleware, async (c) => {
   const contentType = file.type === 'image/gif' ? 'image/gif' : 'image/jpeg'
   const key = `avatars/${userId}`
   await c.env.R2.put(key, await file.arrayBuffer(), { httpMetadata: { contentType } })
-  const url = `${c.env.UPLOADS_URL}/${key}`
+  const url = `${c.env.UPLOADS_URL}/${key}?v=${Date.now()}`
   await c.env.DB.prepare('UPDATE users SET avatar_url = ? WHERE id = ?').bind(url, userId).run()
   return c.json({ url })
 })
